@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:4000");
 
 function Chat() {
   const [name, setName] = useState("");
@@ -7,14 +10,27 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [joined, setJoined] = useState(false);
 
+  useEffect(() => {
+    socket.on("message", (srvMssg) => {
+      setMessages((prev) => [...prev, srvMssg]);
+    });
+
+    return () => {
+      socket.off("message");
+    };
+  }, []);
+
   const joinRoom = (e) => {
     e.preventDefault();
     if (name && room) {
       setJoined(true);
+      socket.emit("join", room);
     }
   };
 
-  const sendMessage = () => {};
+  const sendMessage = () => {
+    socket.emit("message", { room, message, name });
+  };
 
   if (!joined) {
     return (
@@ -79,7 +95,7 @@ function Chat() {
         </div>
         <h2 className="text-xl font-bold mb-4">Chat Room: {room}</h2>
         <div className="h-64 overflow-y-scroll">
-          {messages.map((msg, index) => (
+          {/* {messages.map((msg, index) => (
             <div
               key={index}
               className={`mb-2 p-2 ${
@@ -87,6 +103,16 @@ function Chat() {
               } bg-gray-200 rounded`}
             >
               {msg.text}
+            </div>
+          ))} */}
+          {messages.map(({ name: chatName, message }, index) => (
+            <div
+              key={index}
+              className={`mb-2 p-2 ${
+                chatName === name ? "text-right" : ""
+              } bg-gray-200 rounded`}
+            >
+              {`${chatName}: ${message}`}
             </div>
           ))}
         </div>
